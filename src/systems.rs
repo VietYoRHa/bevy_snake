@@ -1,18 +1,38 @@
 use bevy::prelude::*;
 use rand::Rng;
 use crate::components::{Direction, Food, Position, SnakeHead, SnakeSegment};
-use crate::utils::{GRID_SIZE, GRID_SQUARE_SIZE};
+use crate::utils::{GRID_SIZE, GRID_SQUARE_SIZE, SPRITE_SCALE};
+use crate::resources::GameTextures;
 
-pub fn setup(mut commands: Commands) {
+pub fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let game_textures = GameTextures {
+        head_up: asset_server.load("head_up.png"),
+        head_down: asset_server.load("head_down.png"),
+        head_left: asset_server.load("head_left.png"),
+        head_right: asset_server.load("head_right.png"),
+        body_horizontal: asset_server.load("body_horizontal.png"),
+        body_vertical: asset_server.load("body_vertical.png"),
+        body_bottomleft: asset_server.load("body_bottomleft.png"),
+        body_bottomright: asset_server.load("body_bottomright.png"),
+        body_topleft: asset_server.load("body_topleft.png"),
+        body_topright: asset_server.load("body_topright.png"),
+        tail_up: asset_server.load("tail_up.png"),
+        tail_down: asset_server.load("tail_down.png"),
+        tail_left: asset_server.load("tail_left.png"),
+        tail_right: asset_server.load("tail_right.png"),
+        apple: asset_server.load("apple.png"),
+    };
+    commands.insert_resource(game_textures.clone());
+
     commands.spawn(Camera2dBundle::default());
 
     commands.spawn((
         SpriteBundle {
-            sprite: Sprite {
-                color: Color::MIDNIGHT_BLUE,
+            texture: game_textures.head_up.clone(),
+            transform: Transform{
+                scale: SPRITE_SCALE,
                 ..default()
             },
-            transform: Transform::default().with_scale(Vec3::splat(GRID_SQUARE_SIZE)),
             ..default()
         },
         SnakeHead {
@@ -26,11 +46,11 @@ pub fn setup(mut commands: Commands) {
 
     commands.spawn((
         SpriteBundle {
-            sprite: Sprite {
-                color: Color::GREEN,
+            texture: game_textures.tail_down.clone(),
+            transform: Transform{
+                scale: SPRITE_SCALE,
                 ..default()
             },
-            transform: Transform::default().with_scale(Vec3::splat(GRID_SQUARE_SIZE)),
             ..default()
         },
         SnakeSegment,
@@ -41,14 +61,14 @@ pub fn setup(mut commands: Commands) {
     ));
 }
 
-pub fn spawn_food(mut commands: Commands) {
+pub fn spawn_food(mut commands: Commands, game_textures: Res<GameTextures>) {
     commands.spawn((
         SpriteBundle {
-            sprite: Sprite {
-                color: Color::RED,
+            texture: game_textures.apple.clone(),
+            transform: Transform{
+                scale: SPRITE_SCALE,
                 ..default()
             },
-            transform: Transform::default().with_scale(Vec3::splat(GRID_SQUARE_SIZE)),
             ..default()
         },
         Food,
