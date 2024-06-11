@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-#[derive(PartialEq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Direction {
     Up,
     Down,
@@ -17,10 +17,14 @@ pub struct Position {
 #[derive(Component)]
 pub struct SnakeHead {
     pub direction: Direction,
+    pub texture: Handle<Image>,
 }
 
 #[derive(Component)]
-pub struct SnakeSegment;
+pub struct SnakeSegment {
+    pub is_tail: bool,
+    pub texture: Handle<Image>,
+}
 
 #[derive(Component)]
 pub struct Food;

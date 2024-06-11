@@ -1,4 +1,6 @@
 use bevy::app::App;
+use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
+use bevy::diagnostic::LogDiagnosticsPlugin;
 use bevy::DefaultPlugins;
 use bevy::prelude::*;
 use bevy::time::FixedTimestep;
@@ -34,6 +36,8 @@ fn main() {
             },
             ..default()
         }))
+        // .add_plugin(LogDiagnosticsPlugin::default())
+        // .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_system(handle_movement_input)
         .add_system_set(
             SystemSet::new()
