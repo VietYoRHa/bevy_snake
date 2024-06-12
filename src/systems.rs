@@ -127,7 +127,6 @@ pub fn handle_movement(
 ) {
     let (mut head, mut head_pos, mut head_texture) = head_query.iter_mut().next().unwrap();
     let head_prev_transform = head_pos.clone();
-    let mut head_axial = Axial::Vertical;
 
     match head.direction {
         Direction::Up => {
@@ -141,27 +140,21 @@ pub fn handle_movement(
         Direction::Left => {
             head_pos.x -= 1;
             *head_texture = game_textures.head_left.clone();
-            head_axial = Axial::Horizontal;
         }
         Direction::Right => {
             head_pos.x += 1;
             *head_texture = game_textures.head_right.clone();
-            head_axial = Axial::Horizontal;
         }
     }
 
     let mut segment_prev_translation = head_prev_transform;
     for (mut segment, mut segment_pos, mut segment_texture) in segment_query.iter_mut() {
-        match head_axial {
-            Axial::Vertical => {
-                segment.axial = Axial::Vertical;
-                *segment_texture = game_textures.body_vertical.clone();
-            }
-            Axial::Horizontal => {
-                segment.axial = Axial::Horizontal;
-                *segment_texture = game_textures.body_horizontal.clone();
-            }
-        };
+        if segment_pos.x == segment_prev_translation.x {
+            *segment_texture = game_textures.body_vertical.clone();
+        }else if segment_pos.y == segment_prev_translation.y {
+            *segment_texture = game_textures.body_horizontal.clone();
+        }
+
 
         let prev = segment_pos.clone();
         segment_pos.x = segment_prev_translation.x;
@@ -185,15 +178,15 @@ pub fn handle_movement(
 
 pub fn handle_eat_food(
     mut commands: Commands,
-    head_query: Query<&Position, With<SnakeHead>>,
-    tail_query: Query<(&Position, &SnakeTail), With<SnakeTail>>,
+    head_query: Query<(&Position, &SnakeHead), With<SnakeHead>>,
+    tail_query: Query<&Position, With<SnakeTail>>,
     food_query: Query<(Entity, &Position), With<Food>>,
     game_textures: Res<GameTextures>
 ) {
-    let head_pos = head_query.single();
-    let (tail_pos, tail_enity) = tail_query.single();
+    let (head_pos, head_enity) = head_query.single();
+    let tail_pos = tail_query.single();
 
-    let (segment_texture, segment_axial) = match tail_enity.direction {
+    let (segment_texture, segment_axial) = match head_enity.direction {
         Direction::Up | Direction::Down => (game_textures.body_vertical.clone(), Axial::Vertical),
         Direction::Left | Direction::Right => (game_textures.body_horizontal.clone(), Axial::Horizontal),
     };
@@ -203,7 +196,6 @@ pub fn handle_eat_food(
             commands.entity(food_entity).despawn();
             commands.spawn((
                 SpriteBundle {
-                    texture: segment_texture.clone(),
                     transform: Transform{
                         scale: SPRITE_SCALE,
                         ..default()
@@ -212,11 +204,11 @@ pub fn handle_eat_food(
                 },
                 SnakeSegment {
                     axial: segment_axial,
-                    texture: segment_texture.clone(),
+                    texture: Handle::default(),
                 },
                 Position {
-                    x: tail_pos.x,
-                    y: tail_pos.y
+                    x: head_pos.x,
+                    y: head_pos.y
                 }
             ));
         }
