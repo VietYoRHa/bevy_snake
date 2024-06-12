@@ -8,6 +8,12 @@ pub enum Direction {
     Right,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Axial {
+    Vertical,
+    Horizontal,
+}
+
 #[derive(Component, Clone, Copy, PartialEq, Eq)]
 pub struct Position {
     pub x: i32,
@@ -24,6 +30,7 @@ pub struct SnakeHead {
 pub struct SnakeSegment {
     pub is_tail: bool,
     pub texture: Handle<Image>,
+    pub axial: Axial,
 }
 
 #[derive(Component)]
