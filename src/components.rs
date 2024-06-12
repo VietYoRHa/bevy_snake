@@ -28,9 +28,14 @@ pub struct SnakeHead {
 
 #[derive(Component)]
 pub struct SnakeSegment {
-    pub is_tail: bool,
-    pub texture: Handle<Image>,
     pub axial: Axial,
+    pub texture: Handle<Image>,
+}
+
+#[derive(Component)]
+pub struct SnakeTail {
+    pub direction: Direction,
+    pub texture: Handle<Image>,
 }
 
 #[derive(Component)]

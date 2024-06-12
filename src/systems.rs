@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use rand::Rng;
-use crate::components::{Direction, Axial, Food, Position, SnakeHead, SnakeSegment};
+use crate::components::{Direction, Axial, Food, Position, SnakeHead, SnakeSegment, SnakeTail};
 use crate::utils::{GRID_SIZE, GRID_SQUARE_SIZE, SPRITE_SCALE};
 use crate::resources::GameTextures;
 
@@ -41,47 +41,45 @@ pub fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         },
         Position {
             x: 0,
+            y: 2
+        }
+    ));
+
+    commands.spawn((
+        SpriteBundle {
+            texture: game_textures.body_vertical.clone(),
+            transform: Transform{
+                scale: SPRITE_SCALE,
+                ..default()
+            },
+            ..default()
+        },
+        SnakeSegment {
+            texture: game_textures.body_vertical.clone(),
+            axial: Axial::Vertical,
+        },
+        Position {
+            x: 0,
+            y: 1
+        }
+    ));
+
+    commands.spawn((
+        SpriteBundle {
+            texture: game_textures.tail_down.clone(),
+            transform: Transform{
+                scale: SPRITE_SCALE,
+                ..default()
+            },
+            ..default()
+        },
+        SnakeTail {
+            direction: Direction::Down,
+            texture: game_textures.tail_down.clone(),
+        },
+        Position {
+            x: 0,
             y: 0
-        }
-    ));
-
-    commands.spawn((
-        SpriteBundle {
-            texture: game_textures.body_vertical.clone(),
-            transform: Transform{
-                scale: SPRITE_SCALE,
-                ..default()
-            },
-            ..default()
-        },
-        SnakeSegment {
-            is_tail: false,
-            texture: game_textures.body_vertical.clone(),
-            axial: Axial::Vertical,
-        },
-        Position {
-            x: 0,
-            y: -1
-        }
-    ));
-
-    commands.spawn((
-        SpriteBundle {
-            texture: game_textures.tail_down.clone(),
-            transform: Transform{
-                scale: SPRITE_SCALE,
-                ..default()
-            },
-            ..default()
-        },
-        SnakeSegment {
-            is_tail: true,
-            texture: game_textures.tail_down.clone(),
-            axial: Axial::Vertical,
-        },
-        Position {
-            x: 0,
-            y: -2
         }
     ));
 }
@@ -122,145 +120,105 @@ pub fn handle_movement_input(
 }
 
 pub fn handle_movement(
-    mut query: Query<(&mut SnakeHead, &mut Position, &mut Handle<Image>), With<SnakeHead>>,
-    mut segment_query: Query<(&mut Position, &mut SnakeSegment), (Without<SnakeHead>, With<SnakeSegment>)>,
+    mut head_query: Query<(&mut SnakeHead, &mut Position, &mut Handle<Image>), With<SnakeHead>>,
+    mut segment_query: Query<(&mut SnakeSegment, &mut Position, &mut Handle<Image>), (With<SnakeSegment>, Without<SnakeHead>, Without<SnakeTail>)>,
+    mut tail_query: Query<(&mut Position, &mut Handle<Image>), (With<SnakeTail>, Without<SnakeHead>, Without<SnakeSegment>)>,
     game_textures: Res<GameTextures>
 ) {
-    let (mut head, mut pos, mut texture) = query.iter_mut().next().unwrap();
-    let prev_transform = pos.clone();
+    let (mut head, mut head_pos, mut head_texture) = head_query.iter_mut().next().unwrap();
+    let head_prev_transform = head_pos.clone();
+    let mut head_axial = Axial::Vertical;
 
     match head.direction {
         Direction::Up => {
-            pos.y += 1;
-            *texture = game_textures.head_up.clone();
+            head_pos.y += 1;
+            *head_texture = game_textures.head_up.clone();
         }
         Direction::Down => {
-            pos.y -= 1;
-            *texture = game_textures.head_down.clone();
+            head_pos.y -= 1;
+            *head_texture = game_textures.head_down.clone();
         }
         Direction::Left => {
-            pos.x -= 1;
-            *texture = game_textures.head_left.clone();
+            head_pos.x -= 1;
+            *head_texture = game_textures.head_left.clone();
+            head_axial = Axial::Horizontal;
         }
         Direction::Right => {
-            pos.x += 1;
-            *texture = game_textures.head_right.clone();
+            head_pos.x += 1;
+            *head_texture = game_textures.head_right.clone();
+            head_axial = Axial::Horizontal;
         }
     }
 
-    let mut prev_translation = prev_transform;
-    let mut prev_axial = match head.direction {
-        Direction::Up | Direction::Down => Axial::Vertical,
-        Direction::Left | Direction::Right => Axial::Horizontal,
-    };
-
-    for (mut segment_pos, mut segment) in segment_query.iter_mut() {
-        let prev = segment_pos.clone();
-        segment_pos.x = prev_translation.x;
-        segment_pos.y = prev_translation.y;
-
-        let new_axial = if segment.is_tail {
-            prev_axial // Keep the axial of the tail the same
-        } else {
-            let current_axial = match head.direction {
-                Direction::Up | Direction::Down => Axial::Vertical,
-                Direction::Left | Direction::Right => Axial::Horizontal,
-            };
-
-            match (prev_axial, current_axial) {
-                (Axial::Vertical, Axial::Horizontal) => {
-                    // Change texture to corner piece
-                    if head.direction == Direction::Right {
-                        segment.texture = game_textures.body_bottomright.clone();
-                    } else {
-                        segment.texture = game_textures.body_bottomleft.clone();
-                    }
-                },
-                (Axial::Horizontal, Axial::Vertical) => {
-                    // Change texture to corner piece
-                    if head.direction == Direction::Up {
-                        segment.texture = game_textures.body_topright.clone();
-                    } else {
-                        segment.texture = game_textures.body_topleft.clone();
-                    }
-                },
-                _ => {},
+    let mut segment_prev_translation = head_prev_transform;
+    for (mut segment, mut segment_pos, mut segment_texture) in segment_query.iter_mut() {
+        match head_axial {
+            Axial::Vertical => {
+                segment.axial = Axial::Vertical;
+                *segment_texture = game_textures.body_vertical.clone();
             }
-
-            current_axial
+            Axial::Horizontal => {
+                segment.axial = Axial::Horizontal;
+                *segment_texture = game_textures.body_horizontal.clone();
+            }
         };
 
-        prev_axial = new_axial;
-        prev_translation = prev;
+        let prev = segment_pos.clone();
+        segment_pos.x = segment_prev_translation.x;
+        segment_pos.y = segment_prev_translation.y;
+        segment_prev_translation = prev;
     }
+
+    let (mut tail_postion, mut tail_texture) = tail_query.iter_mut().next().unwrap();
+    let tail_pos_sub = (tail_postion.x - segment_prev_translation.x, tail_postion.y - segment_prev_translation.y);
+    *tail_texture = match tail_pos_sub {
+        (0, -1) => game_textures.tail_down.clone(),
+        (0, 1) => game_textures.tail_up.clone(),
+        (-1, 0) => game_textures.tail_left.clone(),
+        (1, 0) => game_textures.tail_right.clone(),
+        _ => tail_texture.clone(),
+    };
+    let tail_prev_translation = segment_prev_translation;
+    tail_postion.x = tail_prev_translation.x;
+    tail_postion.y = tail_prev_translation.y;
 }
 
 pub fn handle_eat_food(
     mut commands: Commands,
     head_query: Query<&Position, With<SnakeHead>>,
-    segment_query: Query<(Entity, &Position, &mut SnakeSegment), Without<SnakeHead>>,
+    tail_query: Query<(&Position, &SnakeTail), With<SnakeTail>>,
     food_query: Query<(Entity, &Position), With<Food>>,
     game_textures: Res<GameTextures>
 ) {
     let head_pos = head_query.single();
+    let (tail_pos, tail_enity) = tail_query.single();
 
+    let (segment_texture, segment_axial) = match tail_enity.direction {
+        Direction::Up | Direction::Down => (game_textures.body_vertical.clone(), Axial::Vertical),
+        Direction::Left | Direction::Right => (game_textures.body_horizontal.clone(), Axial::Horizontal),
+    };
     for (food_entity, food_pos) in food_query.iter() {
         if head_pos.x == food_pos.x && head_pos.y == food_pos.y {
             // Despawn the food
             commands.entity(food_entity).despawn();
-
-            // Find the current tail segment
-            let mut tail_entity = None;
-            let mut tail_position = None;
-            let mut tail_segment = None;
-
-            for (entity, pos, segment) in segment_query.iter() {
-                if segment.is_tail {
-                    tail_entity = Some(entity);
-                    tail_position = Some(*pos);
-                    tail_segment = Some(segment.clone());
-                    break;
-                }
-            }
-
-            // Update the current tail segment to a body segment
-            if let Some(tail_entity) = tail_entity {
-                commands.entity(tail_entity).insert((
-                    match tail_segment.as_ref().unwrap().axial {
-                        Axial::Vertical => game_textures.body_vertical.clone(),
-                        Axial::Horizontal => game_textures.body_horizontal.clone(),
-                    },
-                    SnakeSegment {
-                        is_tail: false,
-                        texture: Handle::default(),
-                        axial: tail_segment.unwrap().axial,
-                    }
-                ));
-            }
-
-            // Add a new tail segment at the old tail position
-            if let Some(tail_pos) = tail_position {
-                let old_tail_texture = tail_segment.unwrap().texture.clone();
-                commands.spawn((
-                    SpriteBundle {
-                        texture: old_tail_texture.clone(), // Adjust the texture if needed
-                        transform: Transform{
-                            scale: SPRITE_SCALE,
-                            ..default()
-                        },
+            commands.spawn((
+                SpriteBundle {
+                    texture: segment_texture.clone(),
+                    transform: Transform{
+                        scale: SPRITE_SCALE,
                         ..default()
                     },
-                    SnakeSegment {
-                        is_tail: true,
-                        texture: old_tail_texture,
-                        axial: tail_segment.unwrap().axial,
-                    },
-                    Position {
-                        x: tail_pos.x,
-                        y: tail_pos.y,
-                    }
-                ));
-            }
+                    ..default()
+                },
+                SnakeSegment {
+                    axial: segment_axial,
+                    texture: segment_texture.clone(),
+                },
+                Position {
+                    x: tail_pos.x,
+                    y: tail_pos.y
+                }
+            ));
         }
     }
 }
@@ -308,7 +266,6 @@ pub fn check_gameover(
                     ..default()
                 },
                 SnakeSegment {
-                    is_tail: false,
                     texture: game_textures.body_vertical.clone(),
                     axial: Axial::Vertical,
                 },
@@ -327,10 +284,9 @@ pub fn check_gameover(
                     },
                     ..default()
                 },
-                SnakeSegment {
-                    is_tail: true,
+                SnakeTail {
+                    direction: Direction::Down,
                     texture: game_textures.tail_down.clone(),
-                    axial: Axial::Vertical,
                 },
                 Position {
                     x: 0,
