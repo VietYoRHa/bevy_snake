@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use rand::Rng;
 use crate::components::{Direction, Axial, Food, Position, SnakeHead, SnakeSegment, SnakeTail};
-use crate::utils::{GRID_SIZE, GRID_SQUARE_SIZE, SPRITE_SCALE};
+use crate::utils::{GRID_SIZE, SPRITE_SCALE};
 use crate::resources::GameTextures;
 
 pub fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
@@ -233,9 +233,13 @@ pub fn check_gameover(
     segments_query: Query<&Position, With<SnakeSegment>>,
     game_textures: Res<GameTextures>
 ) {
+    let mut is_head_collision = false;
     let head = head_query.single();
+    if head.x < 0 || head.x >= GRID_SIZE as i32 || head.y < 0 || head.y >= GRID_SIZE as i32{
+        is_head_collision = true;
+    }
     for segment in segments_query.iter() {
-        if head.x == segment.x && head.y == segment.y {
+        if is_head_collision | (head.x == segment.x && head.y == segment.y) {
             for entity in entity_query.iter() {
                 commands.entity(entity).despawn();
             }
@@ -296,6 +300,7 @@ pub fn check_gameover(
                     y: -2
                 }
             ));
+            return;
         }
     }
 }
