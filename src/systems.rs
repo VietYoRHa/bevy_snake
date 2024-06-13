@@ -122,7 +122,7 @@ pub fn handle_movement_input(
 pub fn handle_movement(
     mut head_query: Query<(&mut SnakeHead, &mut Position, &mut Handle<Image>), With<SnakeHead>>,
     mut segment_query: Query<(&mut SnakeSegment, &mut Position, &mut Handle<Image>), (With<SnakeSegment>, Without<SnakeHead>, Without<SnakeTail>)>,
-    mut tail_query: Query<(&mut Position, &mut Handle<Image>), (With<SnakeTail>, Without<SnakeHead>, Without<SnakeSegment>)>,
+    mut tail_query: Query<(&mut SnakeTail, &mut Position, &mut Handle<Image>), (With<SnakeTail>, Without<SnakeHead>, Without<SnakeSegment>)>,
     game_textures: Res<GameTextures>
 ) {
     let (mut head, mut head_pos, mut head_texture) = head_query.iter_mut().next().unwrap();
@@ -172,31 +172,31 @@ pub fn handle_movement(
         segment_next_pos = segment_pos.clone();
     }
 
-    let (mut tail_postion, mut tail_texture) = tail_query.iter_mut().next().unwrap();
-    let tail_pos_sub = (tail_postion.x - segment_prev_pos.x, tail_postion.y - segment_prev_pos.y);
-    *tail_texture = match tail_pos_sub {
-        (0, -1) => game_textures.tail_down.clone(),
-        (0, 1) => game_textures.tail_up.clone(),
-        (-1, 0) => game_textures.tail_left.clone(),
-        (1, 0) => game_textures.tail_right.clone(),
-        _ => tail_texture.clone(),
+    let (mut tail, mut tail_pos, mut tail_texture) = tail_query.iter_mut().next().unwrap();
+    let tail_pos_sub = ((tail_pos.x - segment_next_pos.x, tail_pos.y - segment_next_pos.y), (tail_pos.x - segment_prev_pos.x, tail_pos.y - segment_prev_pos.y));
+    (*tail_texture, tail.direction) = match tail_pos_sub {
+        ((-1, -1), (-1, 0)) | ((1, -1), (1, 0)) => (game_textures.tail_down.clone(), Direction::Down),
+        ((-1, 1), (-1, 0)) | ((1, 1), (1, 0)) => (game_textures.tail_up.clone(), Direction::Up),
+        ((-1, 1), (0, 1)) | ((-1, -1), (0, -1)) => (game_textures.tail_left.clone(), Direction::Left),
+        ((1, 1), (0, 1)) | ((1, -1), (0, -1))=> (game_textures.tail_right.clone(), Direction::Right),
+        _ => (tail_texture.clone(), tail.direction),
     };
     let tail_prev_translation = segment_prev_pos;
-    tail_postion.x = tail_prev_translation.x;
-    tail_postion.y = tail_prev_translation.y;
+    tail_pos.x = tail_prev_translation.x;
+    tail_pos.y = tail_prev_translation.y;
 }
 
 pub fn handle_eat_food(
     mut commands: Commands,
     head_query: Query<(&Position, &SnakeHead), With<SnakeHead>>,
-    tail_query: Query<&Position, With<SnakeTail>>,
+    tail_query: Query<(&Position, &SnakeTail), With<SnakeTail>>,
     food_query: Query<(Entity, &Position), With<Food>>,
     game_textures: Res<GameTextures>
 ) {
     let (head_pos, head_enity) = head_query.single();
-    let tail_pos = tail_query.single();
+    let (tail_pos, tail) = tail_query.single();
 
-    let (segment_texture, segment_axial) = match head_enity.direction {
+    let (segment_texture, segment_axial) = match tail.direction {
         Direction::Up | Direction::Down => (game_textures.body_vertical.clone(), Axial::Vertical),
         Direction::Left | Direction::Right => (game_textures.body_horizontal.clone(), Axial::Horizontal),
     };
