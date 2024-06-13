@@ -147,23 +147,33 @@ pub fn handle_movement(
         }
     }
 
-    let mut segment_prev_translation = head_prev_transform;
+    let mut segment_prev_pos = head_prev_transform;
+    let mut segment_next_pos = head_pos.clone();
     for (mut segment, mut segment_pos, mut segment_texture) in segment_query.iter_mut() {
-        if segment_pos.x == segment_prev_translation.x {
+        if segment_pos.x != segment_next_pos.x && segment_pos.y != segment_next_pos.y {
+            let seg_relation = ((segment_pos.x - segment_next_pos.x, segment_pos.y - segment_next_pos.y), (segment_pos.x - segment_prev_pos.x, segment_pos.y - segment_prev_pos.y));
+            *segment_texture = match seg_relation {
+                ((-1, 1), (-1, 0)) | ((1, -1), (0, -1))=> game_textures.body_bottomleft.clone(),
+                ((-1, -1), (0, -1)) | ((1, 1), (1, 0))=> game_textures.body_bottomright.clone(),
+                ((-1, -1), (-1, 0)) | ((1, 1), (0, 1))=> game_textures.body_topleft.clone(),
+                ((-1, 1), (0, 1)) | ((1, -1), (1, 0))=> game_textures.body_topright.clone(),
+                _ => segment_texture.clone(),
+            };
+        } else if segment_pos.x == segment_next_pos.x {
             *segment_texture = game_textures.body_vertical.clone();
-        }else if segment_pos.y == segment_prev_translation.y {
+        } else if segment_pos.y == segment_next_pos.y {
             *segment_texture = game_textures.body_horizontal.clone();
         }
 
-
         let prev = segment_pos.clone();
-        segment_pos.x = segment_prev_translation.x;
-        segment_pos.y = segment_prev_translation.y;
-        segment_prev_translation = prev;
+        segment_pos.x = segment_prev_pos.x;
+        segment_pos.y = segment_prev_pos.y;
+        segment_prev_pos = prev;
+        segment_next_pos = segment_pos.clone();
     }
 
     let (mut tail_postion, mut tail_texture) = tail_query.iter_mut().next().unwrap();
-    let tail_pos_sub = (tail_postion.x - segment_prev_translation.x, tail_postion.y - segment_prev_translation.y);
+    let tail_pos_sub = (tail_postion.x - segment_prev_pos.x, tail_postion.y - segment_prev_pos.y);
     *tail_texture = match tail_pos_sub {
         (0, -1) => game_textures.tail_down.clone(),
         (0, 1) => game_textures.tail_up.clone(),
@@ -171,7 +181,7 @@ pub fn handle_movement(
         (1, 0) => game_textures.tail_right.clone(),
         _ => tail_texture.clone(),
     };
-    let tail_prev_translation = segment_prev_translation;
+    let tail_prev_translation = segment_prev_pos;
     tail_postion.x = tail_prev_translation.x;
     tail_postion.y = tail_prev_translation.y;
 }
@@ -196,6 +206,7 @@ pub fn handle_eat_food(
             commands.entity(food_entity).despawn();
             commands.spawn((
                 SpriteBundle {
+                    texture: segment_texture.clone(),
                     transform: Transform{
                         scale: SPRITE_SCALE,
                         ..default()
@@ -204,11 +215,11 @@ pub fn handle_eat_food(
                 },
                 SnakeSegment {
                     axial: segment_axial,
-                    texture: Handle::default(),
+                    texture: segment_texture.clone(),
                 },
                 Position {
-                    x: head_pos.x,
-                    y: head_pos.y
+                    x: tail_pos.x,
+                    y: tail_pos.y
                 }
             ));
         }
