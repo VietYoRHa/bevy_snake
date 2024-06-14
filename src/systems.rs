@@ -261,7 +261,7 @@ pub fn check_gameover(
                 },
                 Position {
                     x: 14,
-                    y: 0
+                    y: 2
                 }
             ));
 
@@ -280,7 +280,7 @@ pub fn check_gameover(
                 },
                 Position {
                     x: 14,
-                    y: -1
+                    y: 1
                 }
             ));
 
@@ -299,7 +299,7 @@ pub fn check_gameover(
                 },
                 Position {
                     x: 14,
-                    y: -2
+                    y: 0
                 }
             ));
             return;
