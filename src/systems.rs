@@ -147,6 +147,14 @@ pub fn handle_movement(
         }
     }
 
+    (head_pos.x, head_pos.y) = match (head_pos.x, head_pos.y){
+        (-1, _) => (GRID_SIZE - 1, head_pos.y),
+        (GRID_SIZE, _) => (0, head_pos.y),
+        (_, -1) => (head_pos.x, GRID_SIZE - 1),
+        (_, GRID_SIZE) => (head_pos.x, 0),
+        _ => (head_pos.x, head_pos.y),
+    };
+
     let mut segment_prev_pos = head_prev_transform;
     let mut segment_next_pos = head_pos.clone();
     for (mut segment_pos, mut segment_texture) in segment_query.iter_mut() {
@@ -235,13 +243,13 @@ pub fn check_gameover(
     segments_query: Query<&Position, With<SnakeSegment>>,
     game_textures: Res<GameTextures>
 ) {
-    let mut is_head_collision = false;
+    // let mut is_head_collision = false;
     let head = head_query.single();
-    if head.x < 0 || head.x >= GRID_SIZE as i32 || head.y < 0 || head.y >= GRID_SIZE as i32{
-        is_head_collision = true;
-    }
+    // if head.x < 0 || head.x >= GRID_SIZE as i32 || head.y < 0 || head.y >= GRID_SIZE as i32{
+    //     is_head_collision = true;
+    // }
     for segment in segments_query.iter() {
-        if is_head_collision | (head.x == segment.x && head.y == segment.y) {
+        if (head.x == segment.x && head.y == segment.y) {
             for entity in entity_query.iter() {
                 commands.entity(entity).despawn();
             }
@@ -261,7 +269,7 @@ pub fn check_gameover(
                 },
                 Position {
                     x: 14,
-                    y: 0
+                    y: 2
                 }
             ));
 
@@ -280,7 +288,7 @@ pub fn check_gameover(
                 },
                 Position {
                     x: 14,
-                    y: -1
+                    y: 1
                 }
             ));
 
@@ -299,7 +307,7 @@ pub fn check_gameover(
                 },
                 Position {
                     x: 14,
-                    y: -2
+                    y: 0
                 }
             ));
             return;
