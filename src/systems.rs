@@ -40,7 +40,7 @@ pub fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             texture: game_textures.head_up.clone(),
         },
         Position {
-            x: 0,
+            x: 14,
             y: 2
         }
     ));
@@ -59,7 +59,7 @@ pub fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             axial: Axial::Vertical,
         },
         Position {
-            x: 0,
+            x: 14,
             y: 1
         }
     ));
@@ -78,7 +78,7 @@ pub fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             texture: game_textures.tail_down.clone(),
         },
         Position {
-            x: 0,
+            x: 14,
             y: 0
         }
     ));
@@ -121,11 +121,11 @@ pub fn handle_movement_input(
 
 pub fn handle_movement(
     mut head_query: Query<(&mut SnakeHead, &mut Position, &mut Handle<Image>), With<SnakeHead>>,
-    mut segment_query: Query<(&mut SnakeSegment, &mut Position, &mut Handle<Image>), (With<SnakeSegment>, Without<SnakeHead>, Without<SnakeTail>)>,
+    mut segment_query: Query<(&mut Position, &mut Handle<Image>), (With<SnakeSegment>, Without<SnakeHead>, Without<SnakeTail>)>,
     mut tail_query: Query<(&mut SnakeTail, &mut Position, &mut Handle<Image>), (With<SnakeTail>, Without<SnakeHead>, Without<SnakeSegment>)>,
     game_textures: Res<GameTextures>
 ) {
-    let (mut head, mut head_pos, mut head_texture) = head_query.iter_mut().next().unwrap();
+    let (head, mut head_pos, mut head_texture) = head_query.iter_mut().next().unwrap();
     let head_prev_transform = head_pos.clone();
 
     match head.direction {
@@ -149,7 +149,7 @@ pub fn handle_movement(
 
     let mut segment_prev_pos = head_prev_transform;
     let mut segment_next_pos = head_pos.clone();
-    for (mut segment, mut segment_pos, mut segment_texture) in segment_query.iter_mut() {
+    for (mut segment_pos, mut segment_texture) in segment_query.iter_mut() {
         if segment_pos.x != segment_next_pos.x && segment_pos.y != segment_next_pos.y {
             let seg_relation = ((segment_pos.x - segment_next_pos.x, segment_pos.y - segment_next_pos.y), (segment_pos.x - segment_prev_pos.x, segment_pos.y - segment_prev_pos.y));
             *segment_texture = match seg_relation {
@@ -188,17 +188,19 @@ pub fn handle_movement(
 
 pub fn handle_eat_food(
     mut commands: Commands,
-    head_query: Query<(&Position, &SnakeHead), With<SnakeHead>>,
+    head_query: Query<&Position, With<SnakeHead>>,
     tail_query: Query<(&Position, &SnakeTail), With<SnakeTail>>,
     food_query: Query<(Entity, &Position), With<Food>>,
     game_textures: Res<GameTextures>
 ) {
-    let (head_pos, head_enity) = head_query.single();
+    let head_pos = head_query.single();
     let (tail_pos, tail) = tail_query.single();
 
-    let (segment_texture, segment_axial) = match tail.direction {
-        Direction::Up | Direction::Down => (game_textures.body_vertical.clone(), Axial::Vertical),
-        Direction::Left | Direction::Right => (game_textures.body_horizontal.clone(), Axial::Horizontal),
+    let (segment_texture, segment_axial, tail_texture) = match tail.direction {
+        Direction::Up => (game_textures.body_vertical.clone(), Axial::Vertical, game_textures.tail_up.clone()),
+        Direction::Down => (game_textures.body_vertical.clone(), Axial::Vertical, game_textures.tail_down.clone()),
+        Direction::Left => (game_textures.body_horizontal.clone(), Axial::Horizontal, game_textures.tail_left.clone()),
+        Direction::Right => (game_textures.body_horizontal.clone(), Axial::Horizontal, game_textures.tail_right.clone()),
     };
     for (food_entity, food_pos) in food_query.iter() {
         if head_pos.x == food_pos.x && head_pos.y == food_pos.y {
@@ -206,7 +208,7 @@ pub fn handle_eat_food(
             commands.entity(food_entity).despawn();
             commands.spawn((
                 SpriteBundle {
-                    texture: segment_texture.clone(),
+                    texture: tail_texture.clone(),
                     transform: Transform{
                         scale: SPRITE_SCALE,
                         ..default()
@@ -258,7 +260,7 @@ pub fn check_gameover(
                     texture: game_textures.head_up.clone()
                 },
                 Position {
-                    x: 0,
+                    x: 14,
                     y: 0
                 }
             ));
@@ -277,7 +279,7 @@ pub fn check_gameover(
                     axial: Axial::Vertical,
                 },
                 Position {
-                    x: 0,
+                    x: 14,
                     y: -1
                 }
             ));
@@ -296,7 +298,7 @@ pub fn check_gameover(
                     texture: game_textures.tail_down.clone(),
                 },
                 Position {
-                    x: 0,
+                    x: 14,
                     y: -2
                 }
             ));
@@ -305,7 +307,7 @@ pub fn check_gameover(
     }
 }
 
-pub fn position_translation(windows: Res<Windows>, mut q: Query<(&Position, &mut Transform)>) {
+pub fn position_convert(windows: Res<Windows>, mut q: Query<(&Position, &mut Transform)>) {
     fn convert(pos: f32, bound_window: f32, bound_game: f32) -> f32 {
         let tile_size = bound_window / bound_game;
         pos / bound_game * bound_window - (bound_window / 2.) + (tile_size / 2.)

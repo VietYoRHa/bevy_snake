@@ -10,8 +10,8 @@ mod resources;
 mod systems;
 mod utils;
 
-use systems::{handle_movement_input, handle_movement, handle_eat_food, check_gameover, position_translation, setup, spawn_food};
-use crate::utils::{WINDOW_WIDTH, WINDOW_HEIGHT, TIME_STEP};
+use systems::{handle_movement_input, handle_movement, handle_eat_food, check_gameover, position_convert, setup, spawn_food};
+use crate::utils::{WINDOW_WIDTH, WINDOW_HEIGHT, TIME_STEP, FOOD_SPAWN_TIME_STEP};
 
 fn handle_window_close_event(
     mut event_reader: EventReader<WindowCloseRequested>,
@@ -44,14 +44,14 @@ fn main() {
         )
         .add_system_set(
             SystemSet::new()
-                .with_run_criteria(FixedTimestep::step(2.))
+                .with_run_criteria(FixedTimestep::step(FOOD_SPAWN_TIME_STEP))
                 .with_system(spawn_food)
         )
         .add_startup_system(setup)
         .add_system_set_to_stage(
             CoreStage::PostUpdate,
             SystemSet::new()
-                .with_system(position_translation)
+                .with_system(position_convert)
         )
         .insert_resource(ClearColor(Color::rgb(0.686, 0.843, 0.275)))
         .add_system(handle_window_close_event)
