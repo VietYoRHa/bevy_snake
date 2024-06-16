@@ -176,6 +176,15 @@ pub fn handle_movement(
         let prev = segment_pos.clone();
         segment_pos.x = segment_prev_pos.x;
         segment_pos.y = segment_prev_pos.y;
+
+        (segment_pos.x, segment_pos.y) = match (segment_pos.x, segment_pos.y){
+            (-1, _) => (GRID_SIZE - 1, segment_pos.y),
+            (GRID_SIZE, _) => (0, segment_pos.y),
+            (_, -1) => (segment_pos.x, GRID_SIZE - 1),
+            (_, GRID_SIZE) => (segment_pos.x, 0),
+            _ => (segment_pos.x, segment_pos.y),
+        };
+
         segment_prev_pos = prev;
         segment_next_pos = segment_pos.clone();
     }
@@ -192,6 +201,14 @@ pub fn handle_movement(
     let tail_prev_translation = segment_prev_pos;
     tail_pos.x = tail_prev_translation.x;
     tail_pos.y = tail_prev_translation.y;
+
+    (tail_pos.x, tail_pos.y) = match (tail_pos.x, tail_pos.y){
+        (-1, _) => (GRID_SIZE - 1, tail_pos.y),
+        (GRID_SIZE, _) => (0, tail_pos.y),
+        (_, -1) => (tail_pos.x, GRID_SIZE - 1),
+        (_, GRID_SIZE) => (tail_pos.x, 0),
+        _ => (tail_pos.x, tail_pos.y),
+    };
 }
 
 pub fn handle_eat_food(
@@ -249,7 +266,7 @@ pub fn check_gameover(
     //     is_head_collision = true;
     // }
     for segment in segments_query.iter() {
-        if (head.x == segment.x && head.y == segment.y) {
+        if head.x == segment.x && head.y == segment.y {
             for entity in entity_query.iter() {
                 commands.entity(entity).despawn();
             }

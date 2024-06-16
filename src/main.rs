@@ -1,6 +1,7 @@
 use bevy::app::App;
 use bevy::DefaultPlugins;
 use bevy::prelude::*;
+use bevy::render::settings::{PowerPreference, WgpuSettings};
 use bevy::time::FixedTimestep;
 use bevy::window::{PresentMode, WindowCloseRequested};
 
@@ -23,6 +24,10 @@ fn handle_window_close_event(
 
 fn main() {
     App::new()
+        .insert_resource(WgpuSettings{
+            power_preference: PowerPreference::LowPower,
+            ..Default::default()
+        })
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             window: WindowDescriptor {
                 title: "Snake Xenzia".to_string(),
